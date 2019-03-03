@@ -25,6 +25,7 @@ class WalkrClient:
             'Accept-Encoding': 'br, gzip, deflate',
             'User-Agent': 'Walkr/4.9.1 (iPhone; iOS 12.1.2; Scale/2.00)',
             'Connection': 'keep-alive',
+            'Host': 'api.walkrconnect.com'
         }
         self.auth_token = auth_token
         self.version = client_version
@@ -33,7 +34,10 @@ class WalkrClient:
         self.locale = locale
         self.session = requests.Session()
 
-    def fetch(self, url, payload, method='GET'):
+    def request(self, url, payload=None):
+        return self._make_requests(url, payload, method='POST')
+
+    def fetch(self, url, payload=None):
         """
         base method to talk to server
         :param url: api url
@@ -42,16 +46,27 @@ class WalkrClient:
         :return: server json response in a dict
         :raise APIError:
         """
+        return self._make_requests(url, payload, method='GET')
+
+    def _make_requests(self, url, payload, method):
         payload['auth_token'] = self.auth_token
         payload['client_version'] = self.version
         payload['platform'] = self.platform
         payload['timezone'] = self.tz
         payload['locale'] = self.locale
-        result = self.session.request(method=method, url=url, data=payload, headers=self.headers)
 
+        if method == 'POST':
+            result = self.session.post(url=url, json=payload, headers=self.headers)
+        elif method == 'GET':
+            result = self.session.get(url=url, params=payload, headers=self.headers)
+        else:
+            return
         if result.status_code == 200:
             return result.json()
         else:
+            print(url)
+            print(result.request.body)
+            print(result.request.headers)
             raise APIError(result.status_code)
 
     def fetch_now(self, system_time):
@@ -70,8 +85,7 @@ class WalkrClient:
         :return: dict containing list of items in shop
         """
         url = BASE_URL + '/shops'
-        payload = {}
-        return self.fetch(url, payload)
+        return self.fetch(url)
 
     def fetch_epics(self):
         """
@@ -79,8 +93,7 @@ class WalkrClient:
         :return: dict containing list of epics
         """
         url = BASE_URL + '/epics'
-        payload = {}
-        return self.fetch(url, payload)
+        return self.fetch(url)
 
     def update_games(self, data):
         """
@@ -88,9 +101,9 @@ class WalkrClient:
         :param data:
         :returns: dict indicating success or not
         """
-        url = BASE_URL + '\games'
+        url = BASE_URL + '/games'
         payload = {'data': data}
-        return self.fetch(url, payload, 'POST')
+        return self.request(url, payload)
 
     def fetch_friends_count(self):
         """
@@ -98,8 +111,7 @@ class WalkrClient:
         :return: dict with friends count
         """
         url = BASE_URL + '/users/friends_count'
-        payload = {}
-        return self.fetch(url, payload)
+        return self.fetch(url)
 
     def fetch_current_fleet(self):
         """
@@ -107,8 +119,7 @@ class WalkrClient:
         :return: dict containing information about current fleet
         """
         url = BASE_URL + '/fleets/current'
-        payload = {}
-        return self.fetch(url, payload)
+        return self.fetch(url)
 
     def fetch_fleet_comments(self, fleet_id, offset=0, limit=30):
         """
@@ -131,8 +142,7 @@ class WalkrClient:
         :return: pilots information in your bridge
         """
         url = BASE_URL + '/pilots'
-        payload = {}
-        return self.fetch(url, payload)
+        return self.fetch(url)
 
     def check_energy(self, pilot_id):
         """
@@ -141,8 +151,7 @@ class WalkrClient:
         :return: amount of energy checked
         """
         url = BASE_URL + '/pilots/{}/check'.format(pilot_id)
-        payload = {}
-        return self.fetch(url, payload, 'POST')
+        return self.request(url)
 
     def fetch_friends(self, order_by='population', offset=0, limit=100):
         """
@@ -166,8 +175,7 @@ class WalkrClient:
         :return: dict containing list of friend invites
         """
         url = BASE_URL + '/users/friend_invitations'
-        payload = {}
-        return self.fetch(url, payload)
+        return self.fetch(url)
 
     def fetch_new_friends_count(self):
         """
@@ -175,8 +183,7 @@ class WalkrClient:
         :return: dict containing new friends count
         """
         url = BASE_URL + '/users/new_friends_count'
-        payload = {}
-        return self.fetch(url, payload)
+        return self.fetch(url)
 
     def fetch_booster(self):
         """
@@ -184,8 +191,7 @@ class WalkrClient:
         :return: booster status
         """
         url = BASE_URL + '/boosts'
-        payload = {}
-        return self.fetch(url, payload)
+        return self.fetch(url)
 
     def start_booster(self):
         """
@@ -193,8 +199,7 @@ class WalkrClient:
         :return: booster status
         """
         url = BASE_URL + '/boosts'
-        payload = {}
-        return self.fetch(url, payload, 'POST')
+        return self.request(url)
 
     def update_booster_information(self, booster_id, data):
         """
@@ -215,7 +220,7 @@ class WalkrClient:
         """
         url = BASE_URL + '/pilots/convert'
         payload = {'converted_energy': converted_energy}
-        return self.fetch(url, payload, 'POST')
+        return self.request(url, payload)
 
     def fetch_pedometer_settings(self, brand, device_model, os_version):
         """
@@ -240,8 +245,7 @@ class WalkrClient:
         :return: epic rewards
         """
         url = BASE_URL + '/fleets/{}/check_reward_for_epic'.format(fleet_id)
-        payload = {}
-        return self.fetch(url, payload, 'POST')
+        return self.request(url)
 
     def donate_energy_for_epic(self, fleet_id, hitpoints, event_id, energy):
         """
@@ -260,7 +264,7 @@ class WalkrClient:
             'hitpoints': hitpoints,
             'energy': energy
         }
-        return self.fetch(url, payload, 'POST')
+        return self.request(url, payload)
 
     def donate_resources_for_epic(self, fleet_id, hitpoints, event_id, value_a=0, value_b=0, value_c=0):
         """
@@ -283,7 +287,7 @@ class WalkrClient:
             'value_b': value_b,
             'value_c': value_c
         }
-        return self.fetch(url, payload, 'POST')
+        return self.request(url, payload)
 
     def fetch_invite_list(self, epic_id, offset=0, limit=100):
         """
@@ -317,8 +321,7 @@ class WalkrClient:
         :return: dict containing list of fleet avatars
         """
         url = BASE_URL + '/fleets/badges'
-        payload = {}
-        return self.fetch(url, payload)
+        return self.fetch(url)
 
     def fetch_fleet_list(self, epic_id, country_code='US', offset=0, limit=30):
         """
@@ -360,12 +363,27 @@ class WalkrClient:
             'privacy': privacy,
             'is_invitable': is_invitable
         }
-        return self.fetch(url, payload, 'POST')
+        return self.request(url, payload)
 
     def get_currently_joined_lab(self):
         url = BASE_URL + '/labs/current'
         return self.fetch(url, {})
 
-    def get_lab_comments(self, lab_id, queried_at, limit):
-        url = BASE_URL + '/labs/{id}/comments'
-        payload = {}
+    def get_lab_comments(self, lab_id, queried_at, limit=30):
+        url = BASE_URL + '/labs/{id}/comments'.format(id=lab_id)
+        payload = {
+            'limit': limit,
+            'queried_at': queried_at,
+        }
+        return self.fetch(url, payload)
+
+    def donate_energy_in_lab(self, lab_id, donation, identifier, requirement_id, timestamp, donation_type='energy'):
+        url = BASE_URL + '/labs/{id}/donate'.format(id=lab_id)
+        payload = {
+            'donation': donation,
+            'donation_type': donation_type,
+            'identifier': identifier,
+            'requirement_id': requirement_id,
+            'timestamp': timestamp
+        }
+        return self.request(url, payload)
