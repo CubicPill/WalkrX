@@ -361,3 +361,11 @@ class WalkrClient:
             'is_invitable': is_invitable
         }
         return self.fetch(url, payload, 'POST')
+
+    def get_currently_joined_lab(self):
+        url = BASE_URL + '/labs/current'
+        return self.fetch(url, {})
+
+    def get_lab_comments(self, lab_id, queried_at, limit):
+        url = BASE_URL + '/labs/{id}/comments'
+        payload = {}
