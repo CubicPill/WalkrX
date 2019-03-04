@@ -1,6 +1,7 @@
 import requests
 
 BASE_URL = 'https://api.walkrconnect.com/api/v1'
+UA = 'Walkr/4.9.1 (iPhone; iOS 12.1.2; Scale/2.00)'
 
 
 class APIError(Exception):
@@ -11,7 +12,7 @@ class APIError(Exception):
 
 
 class WalkrClient:
-    def __init__(self, auth_token, client_version, platform, timezone=8, locale='en'):
+    def __init__(self, auth_token, client_version, platform, timezone=8, locale='en', user_agent=UA):
         """
         Model of Walkr client
         :param auth_token: authorization token
@@ -23,7 +24,7 @@ class WalkrClient:
         self.headers = {
             'Content-Type': 'application/json',
             'Accept-Encoding': 'br, gzip, deflate',
-            'User-Agent': 'Walkr/4.9.1 (iPhone; iOS 12.1.2; Scale/2.00)',
+            'User-Agent': user_agent,
             'Connection': 'keep-alive',
             'Host': 'api.walkrconnect.com'
         }
@@ -35,7 +36,7 @@ class WalkrClient:
         self.session = requests.Session()
 
     def request(self, url, payload=None):
-        return self._make_requests(url, payload, method='POST')
+        return self._make_request(url, payload, method='POST')
 
     def fetch(self, url, payload=None):
         """
@@ -46,27 +47,22 @@ class WalkrClient:
         :return: server json response in a dict
         :raise APIError:
         """
-        return self._make_requests(url, payload, method='GET')
+        return self._make_request(url, payload, method='GET')
 
-    def _make_requests(self, url, payload, method):
+    def _make_request(self, url, payload, method):
         payload['auth_token'] = self.auth_token
         payload['client_version'] = self.version
         payload['platform'] = self.platform
         payload['timezone'] = self.tz
         payload['locale'] = self.locale
 
-        if method == 'POST':
-            result = self.session.post(url=url, json=payload, headers=self.headers)
-        elif method == 'GET':
+        if method == 'GET':
             result = self.session.get(url=url, params=payload, headers=self.headers)
         else:
-            return
+            result = self.session.request(method=method, url=url, json=payload, headers=self.headers)
         if result.status_code == 200:
             return result.json()
         else:
-            print(url)
-            print(result.request.body)
-            print(result.request.headers)
             raise APIError(result.status_code)
 
     def fetch_now(self, system_time):
@@ -210,7 +206,7 @@ class WalkrClient:
         """
         url = BASE_URL + '/boosts/{}'.format(booster_id)
         payload = {'data': data}
-        return self.fetch(url, payload, 'PUT')
+        return self._make_request(url, payload, 'PUT')
 
     def convert_energy(self, converted_energy):
         """
