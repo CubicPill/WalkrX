@@ -10,6 +10,9 @@ class APIError(Exception):
         self.status_code = status_code
         self.message = 'Request failed with status code {}'.format(status_code)
 
+    def __str__(self):
+        return self.message
+
 
 class WalkrClient:
     def __init__(self, auth_token, client_version, platform, timezone=8, locale='en', user_agent=UA):
